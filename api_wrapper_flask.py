@@ -14,6 +14,10 @@ def gerar_token_sha256(data_formatada):
     token_concatenado = TOKEN_ORIGINAL + data_formatada
     return hashlib.sha256(token_concatenado.encode()).hexdigest()
 
+@app.route("/")
+def home():
+    return "✅ API Horas Extras está online! Use /consultar-horas-extras?inicio=...&fim=..."
+
 @app.route("/consultar-horas-extras", methods=["GET"])
 def consultar_horas_extras():
     dtde = request.args.get("inicio")
