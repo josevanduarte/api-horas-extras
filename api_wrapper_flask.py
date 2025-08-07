@@ -16,15 +16,16 @@ def gerar_token_sha256(data_formatada):
 
 @app.route("/")
 def home():
-    return "✅ API Horas Extras está online! Use /consultar-horas-extras?inicio=...&fim=..."
+    return "✅ API está online! Use /consultar-horas-extras ou /consultar-consolidado-banco"
 
+# 🔹 Rota original: Horas Extras
 @app.route("/consultar-horas-extras", methods=["GET"])
 def consultar_horas_extras():
     dtde = request.args.get("inicio")
     dtate = request.args.get("fim")
 
     if not dtde or not dtate:
-        return jsonify({"erro": "Parâmetros 'inicio' e 'fim' são obrigatórios. Ex: ?inicio=01/01/2025&fim=06/08/2025"}), 400
+        return jsonify({"erro": "Parâmetros 'inicio' e 'fim' são obrigatórios. Ex: ?inicio=01/01/2025&fim=31/12/2025"}), 400
 
     data_hoje = datetime.now().strftime("%d/%m/%Y")
     token = gerar_token_sha256(data_hoje)
@@ -41,6 +42,37 @@ def consultar_horas_extras():
         "dtde": dtde,
         "dtate": dtate,
         "alteracao": False
+    }
+
+    try:
+        response = requests.post(API_URL, json=body, headers=headers)
+        return jsonify(response.json())
+    except Exception as e:
+        return jsonify({"erro": str(e)}), 500
+
+# 🔹 Nova rota: Ponto Consolidado Banco
+@app.route("/consultar-consolidado-banco", methods=["GET"])
+def consultar_consolidado_banco():
+    dtde = request.args.get("inicio")
+    dtate = request.args.get("fim")
+
+    if not dtde or not dtate:
+        return jsonify({"erro": "Parâmetros 'inicio' e 'fim' são obrigatórios. Ex: ?inicio=01/01/2025&fim=31/12/2025"}), 400
+
+    data_hoje = datetime.now().strftime("%d/%m/%Y")
+    token = gerar_token_sha256(data_hoje)
+
+    headers = {
+        "Content-Type": "application/json",
+        "User": USER,
+        "Token": token
+    }
+
+    body = {
+        "pag": "ponto_consolidado_banco",
+        "cmd": "get",
+        "dtde": dtde,
+        "dtate": dtate
     }
 
     try:
