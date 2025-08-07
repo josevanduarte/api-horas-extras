@@ -1,41 +1,53 @@
-from datetime import datetime, timedelta
-import requests
+
+from flask import Flask, request, jsonify
 import hashlib
+import requests
+from datetime import datetime
 
-TOKEN = "mRvd11QSxXs5LUL$CfW1"
+app = Flask(__name__)
+
+TOKEN_ORIGINAL = "mRvd11QSxXs5LUL$CfW1"
 USER = "02297349289"
-URL = "https://api-horas-extras.onrender.com/consultar-horas-extras"
+API_URL = "https://stou.ifractal.com.br/i9saude/rest/"
 
-def gerar_token():
-    hoje = datetime.now().strftime("%d/%m/%Y")
-    return hashlib.sha256((TOKEN + hoje).encode()).hexdigest()
+def gerar_token_sha256(data_formatada):
+    token_concatenado = TOKEN_ORIGINAL + data_formatada
+    return hashlib.sha256(token_concatenado.encode()).hexdigest()
 
-def gerar_datas(dia_inicio, dia_fim):
-    data_atual = dia_inicio
-    while data_atual <= dia_fim:
-        data_final = data_atual + timedelta(days=29)
-        yield (data_atual.strftime("%d/%m/%Y"), min(data_final, dia_fim).strftime("%d/%m/%Y"))
-        data_atual = data_final + timedelta(days=1)
+@app.route("/")
+def home():
+    return "✅ API Horas Extras está online! Use /consultar-horas-extras?inicio=...&fim=..."
 
-def baixar_todos_dados():
-    inicio = datetime.strptime("01/01/2025", "%d/%m/%Y")
-    fim = datetime.strptime("31/12/2025", "%d/%m/%Y")
+@app.route("/consultar-horas-extras", methods=["GET"])
+def consultar_horas_extras():
+    dtde = request.args.get("inicio")
+    dtate = request.args.get("fim")
 
-    token = gerar_token()
+    if not dtde or not dtate:
+        return jsonify({"erro": "Parâmetros 'inicio' e 'fim' são obrigatórios. Ex: ?inicio=01/01/2025&fim=06/08/2025"}), 400
+
+    data_hoje = datetime.now().strftime("%d/%m/%Y")
+    token = gerar_token_sha256(data_hoje)
+
     headers = {
         "Content-Type": "application/json",
         "User": USER,
         "Token": token
     }
 
-    todos_resultados = []
-    for dt_ini, dt_fim in gerar_datas(inicio, fim):
-        print(f"🔄 Baixando de {dt_ini} até {dt_fim}")
-        resp = requests.get(URL, params={"inicio": dt_ini, "fim": dt_fim}, headers=headers)
-        dados = resp.json()
-        todos_resultados.append(dados)
+    body = {
+        "pag": "ponto_relatorio_hora_extra",
+        "cmd": "get",
+        "dtde": dtde,
+        "dtate": dtate,
+        "alteracao": False
+    }
 
-    return todos_resultados
+    try:
+        response = requests.post(API_URL, json=body, headers=headers)
+        return jsonify(response.json())
+    except Exception as e:
+        return jsonify({"erro": str(e)}), 500
 
-dados_completos = baixar_todos_dados()
-print("✅ Dados totais:", len(dados_completos))
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=10000)
