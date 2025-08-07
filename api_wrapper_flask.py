@@ -40,7 +40,7 @@ def consultar_horas_extras():
         "cmd": "get",
         "dtde": dtde,
         "dtate": dtate,
-       "alteracao": true
+       "alteracao": false
     }
 
     try:
